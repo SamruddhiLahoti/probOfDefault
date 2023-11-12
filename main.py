@@ -1,3 +1,5 @@
+import argparse
+
 import matplotlib.pyplot as plt
 import pandas as pd
 import sklearn.metrics as metrics
@@ -5,6 +7,7 @@ import sklearn.metrics as metrics
 from config import *
 from features import FeatureSelection
 from models import *
+from utils import load_dataset, assert_low_VIF
 from preprocess import Preprocessor
 
 
@@ -46,10 +49,6 @@ class WalkForward:
 
         self.model = None
         self.train_mean, self.train_std = None, None
-
-    def __save_params(self):
-        # FIXME
-        pass
 
     def __normalize_assets(self, train_df, test_df):
         """
@@ -122,27 +121,40 @@ class WalkForward:
     def run(self, est_name, features, epochs=5, start_year=2008):
         model_list, pred_list = self.__walk_forward(est_name, features, epochs, start_year)
 
-        self.__save_params()
+        self.model.save_model()
         plot(pred_list, est_name)
 
 
 if __name__ == "__main__":
 
-    dataset = pd.read_csv(DATA_PATH).drop("Unnamed: 0", axis=1).reset_index(drop=True)
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--input_csv', help='Path to the input file')
+    parser.add_argument('--est_name', help='one of logistic, NN, xgb')
+    parser.add_argument('--extract_features', action='store_true', help='To enable/disable feature extraction')
+
+    args = parser.parse_args()
+
+    data_path = args.input_csv if args.input_csv is not None else DATA_PATH
+    dataset = load_dataset(data_path)
 
     preprocessor = Preprocessor()
     fs = FeatureSelection()
 
     dataset = preprocessor.preprocess(dataset)
 
-    # univariate_features = fs.univariate_analysis(dataset)
-    # assert_low_VIF(dataset[univariate_features])
-    #
-    # rfe_features = fs.rfe_analysis(dataset)
-    # assert_low_VIF(dataset[rfe_features])
+    if args.extract_features:
+        uni_variate_ft = fs.univariate_analysis(dataset)
+        assert_low_VIF(dataset[uni_variate_ft])
+        print(f"\n{uni_variate_ft}")
 
+        rfe_features = fs.rfe_analysis(dataset)
+        assert_low_VIF(dataset[rfe_features])
+        print(f"\n{rfe_features}")
+
+    estimator_name = args.est_name if args.est_name else FINAL_MODEL
     wf = WalkForward(dataset)
-    wf.run("xgb", FEATURE_SET)
+    wf.run(estimator_name, FEATURE_SET)
 
     # print(f"Final mean: {wf.train_mean} and std: {wf.train_std}")
 

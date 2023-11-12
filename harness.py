@@ -9,16 +9,12 @@ from config import FINAL_MODEL, FEATURE_SET
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('input_file', help='Path to the input file')
-    parser.add_argument('--output', '-o', help='Path to the output file')
+    parser.add_argument('--input_csv', help='Path to the input file')
+    parser.add_argument('--output_csv', help='Path to the output file')
 
     args = parser.parse_args()
 
-    input_file = args.input_file
-    output_file = args.output
-
-    dataset = load_dataset(input_file)
-
+    dataset = load_dataset(args.input_csv)
     dataset = extract_feature_values(dataset)
 
     model = None
@@ -32,10 +28,9 @@ if __name__ == "__main__":
     model.load_trained_model()
 
     dataset["predicted_pd"] = model.predict(dataset[FEATURE_SET])
-
     dataset.loc[dataset[FEATURE_SET].isnull().any(axis=1), "predicted_pd"] = np.nan
 
-    dataset["predicted_pd"].to_csv(output_file)
+    dataset["predicted_pd"].to_csv(args.output_csv)
 
 
 

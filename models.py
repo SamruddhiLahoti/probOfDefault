@@ -6,9 +6,11 @@ from tensorflow import keras
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils.class_weight import compute_class_weight
-from xgboost import XGBClassifier, Booster
+from xgboost import XGBClassifier, Booster, DMatrix
 
-from config import XGB_SAVE_PATH, NN_SAVE_PATH, LR_SAVE_PATH
+import xgboost as xgb
+
+from config import XGB_SAVE_PATH, NN_SAVE_PATH, LR_SAVE_PATH, CATEGORICAL_FT
 
 
 class LogisticRegression:
@@ -78,18 +80,25 @@ class NeuralNetwork:
 class XGBoost:
 
     def __init__(self):
-        # self.data = data
-        # self.target = target
-        self.model = XGBClassifier()
+        self.params = {
+            'objective': 'binary:logistic',
+            'eval_metric': 'logloss',
+            'scale_pos_weight': 0.013
+        }
+        self.model = None  # XGBClassifier()
 
     def fit_model(self, data, target, features):
-        self.model.fit(data[features], data[target])
+        dtrain = xgb.DMatrix(data[features], label=data[target], enable_categorical=True)
+        self.model = xgb.train(self.params, dtrain, num_boost_round=100)
 
     def predict(self, test_data):
-        return self.model.predict_proba(test_data)[:, 1]
+        dtest = xgb.DMatrix(test_data, enable_categorical=True)
+        return self.model.predict(dtest)
 
     def save_model(self):
-        self.model.save_model(XGB_SAVE_PATH)
+        with open(XGB_SAVE_PATH, 'wb') as file:
+            pickle.dump(self.model, file)
 
     def load_trained_model(self):
-        self.model = Booster(model_file=XGB_SAVE_PATH)
+        with open(XGB_SAVE_PATH, 'rb') as file:
+            self.model = pickle.load(file)

@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 
-from config import DAYS_IN_YEAR
+from config import DAYS_IN_YEAR, NORM_STD, NORM_MEAN
 
 
 def load_dataset(data_path):
@@ -45,6 +45,8 @@ def extract_feature_values(df):
     df["avg_receivables_collection_day"] = DAYS_IN_YEAR / df["receivable_turnover"]
     df["asset_turnover"] = df["rev_operating"] / df["asst_tot"]
     df["net_profit_margin_on_sales"] = df["profit"] / df["rev_operating"]
+
+    df["norm_asst_tot"] = (df["asst_tot"] - NORM_MEAN) / NORM_STD
 
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
 
