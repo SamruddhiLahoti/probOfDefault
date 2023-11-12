@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 
-from config import FEATURE_SET, CATEGORICAL_FT, NORM_STD, NORM_MEAN, TARGET
+from config import FEATURE_SET, CATEGORICAL_FT, NORM_STD, NORM_MEAN
 
 
 def load_dataset(data_path):
@@ -19,7 +19,7 @@ def to_categorical(df):
     return df
 
 
-def extract_feature_values(df):
+def preprocess(df):
     """
     Extracting required features from the dataset
     """
@@ -36,7 +36,7 @@ def extract_feature_values(df):
     df["asset_turnover"] = df["rev_operating"] / df["asst_tot"]
     df["norm_asst_tot"] = (df["asst_tot"] - NORM_MEAN) / NORM_STD
 
-    df = df[FEATURE_SET + [TARGET]].copy()
+    df = df[FEATURE_SET].copy()
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
 
     return df

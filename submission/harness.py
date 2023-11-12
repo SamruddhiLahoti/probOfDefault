@@ -1,9 +1,9 @@
 import argparse
 import numpy as np
 
-from models import XGBoost, NeuralNetwork, LogisticRegression
+from models import XGBoost, LogisticRegression
 
-from utils import load_dataset, extract_feature_values
+from utils import load_dataset, preprocess
 from config import FINAL_MODEL, FEATURE_SET
 
 
@@ -17,13 +17,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     dataset = load_dataset(args.input_csv)
-    dataset = extract_feature_values(dataset)
+    dataset = preprocess(dataset)
 
     model = None
     if FINAL_MODEL == "logistic":
         model = LogisticRegression()
-    elif FINAL_MODEL == "NN":
-        model = NeuralNetwork()
     elif FINAL_MODEL == "xgb":
         model = XGBoost()
 
