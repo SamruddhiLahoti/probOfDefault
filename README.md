@@ -14,9 +14,17 @@
 
 ## Usage
 
+### For Training
 `harness.py`
 
 ```commandline
-python3 harness.py --input_csv  <input file in csv> --output_csv <output csv file path to which the predictions are written> 
+python3 main.py --input_csv  <input file in csv> --extract_features <run feature extraction (bool)> --est_name <model to use>
+```
+
+### For Inference
+`harness.py`
+
+```commandline
+python3 harness.py --input_csv  <input file in csv> --output_csv <output csv file path to which the predictions are written> --model_path <path from which the saved model is loaded>
 ```
 
