@@ -76,26 +76,21 @@ class WalkForward:
 
         return pred_df
 
-    def __estimator(self, est_name, features, data, epochs):
+    def __estimator(self, est_name, features, data):
         if est_name == "logistic":
             self.model = LogisticRegression()
             self.model.fit_model(data, self.target, features)
-
-        elif est_name == "NN":
-            self.model = NeuralNetwork()
-            self.model.fit_model(data, self.target, features, epochs)
 
         elif est_name == "xgb":
             self.model = XGBoost()
             self.model.fit_model(data, self.target, features)
 
-    def __walk_forward(self, est_name, features, epochs, start_year):
+    def __walk_forward(self, est_name, features, start_year):
         """
         Performs training using the walk-forward approach.
         Args:
             est_name: the estimator to use
             features: the features to use for training
-            epochs: num train epochs if the estimator is a neural network
             start_year: the year to start the walk-forward analysis from
         Returns:
             list of all walk-forward models and their corresponding predictions
@@ -113,7 +108,7 @@ class WalkForward:
             default_rate = train_df[train_df[self.target] == 1].shape[0] / train_df.shape[0]
             print(f"\nYear: {year} | Sample default rate: {default_rate * 100:.3f}%")
 
-            self.__estimator(est_name, features, train_df, epochs)
+            self.__estimator(est_name, features, train_df)
             pred = self.__predictor(test_df, features)
 
             model_list.append(self.model)
@@ -123,8 +118,8 @@ class WalkForward:
 
         return model_list, pred_list
 
-    def run(self, est_name, features, epochs=5, start_year=2008):
-        model_list, pred_list = self.__walk_forward(est_name, features, epochs, start_year)
+    def run(self, est_name, features, start_year=2008):
+        model_list, pred_list = self.__walk_forward(est_name, features, start_year)
 
         self.model.save_model()
         plot(pred_list, est_name)
@@ -158,6 +153,3 @@ if __name__ == "__main__":
     estimator_name = args.est_name if args.est_name else FINAL_MODEL
     wf = WalkForward(dataset)
     wf.run(estimator_name, FEATURE_SET)
-
-    # print(f"Final mean: {wf.train_mean} and std: {wf.train_std}")
-

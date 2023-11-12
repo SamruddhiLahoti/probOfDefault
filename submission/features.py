@@ -19,8 +19,8 @@ class FeatureSelection:
 
         self.feature_sets = {
             "liquidity": ["current_ratio", "cash_ratio", "defensive_interval", "wc_net"],
-            "profitability": ["roa", "gross_profit_margin_on_sales", "net_profit_margin_on_sales", "cash_roa"],  # "roe"
-            "leverage": ["debt_assets_lev", "debt_equity_lev", "leverage_st"],  # "financial_leverage"
+            "profitability": ["roa", "gross_profit_margin_on_sales", "net_profit_margin_on_sales", "cash_roa"],
+            "leverage": ["debt_assets_lev", "debt_equity_lev", "leverage_st"],
             "efficiency": ["receivable_turnover", "avg_receivables_collection_day", "asset_turnover",
                            "working_capital_turnover"]
         }
