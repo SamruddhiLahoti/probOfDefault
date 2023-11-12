@@ -10,7 +10,7 @@ from xgboost import XGBClassifier, Booster, DMatrix
 
 import xgboost as xgb
 
-from config import XGB_SAVE_PATH, NN_SAVE_PATH, LR_SAVE_PATH, CATEGORICAL_FT
+from config import XGB_SAVE_PATH, NN_SAVE_PATH, LR_SAVE_PATH
 
 
 class LogisticRegression:
@@ -85,7 +85,7 @@ class XGBoost:
             'eval_metric': 'logloss',
             'scale_pos_weight': 0.013
         }
-        self.model = None  # XGBClassifier()
+        self.model = None
 
     def fit_model(self, data, target, features):
         dtrain = xgb.DMatrix(data[features], label=data[target], enable_categorical=True)
@@ -96,9 +96,12 @@ class XGBoost:
         return self.model.predict(dtest)
 
     def save_model(self):
-        with open(XGB_SAVE_PATH, 'wb') as file:
-            pickle.dump(self.model, file)
+        # with open(XGB_SAVE_PATH, 'wb') as file:
+        #     pickle.dump(self.model, file)
+        self.model.save_model(XGB_SAVE_PATH)
 
     def load_trained_model(self):
-        with open(XGB_SAVE_PATH, 'rb') as file:
-            self.model = pickle.load(file)
+        # with open(XGB_SAVE_PATH, 'rb') as file:
+        #     self.model = pickle.load(file)
+        self.model = xgb.Booster(model_file=XGB_SAVE_PATH)
+

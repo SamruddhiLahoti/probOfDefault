@@ -2,12 +2,11 @@ import pandas as pd
 import numpy as np
 
 from config import TARGET
+from utils import to_categorical
 
 
 class Preprocessor:
     def __init__(self):
-
-        self.categorical_feat = ["legal_struct", "ateco_sector", "HQ_city"]
 
         self.stmt_delay = 0.5
         self.days_in_year = 365
@@ -24,7 +23,7 @@ class Preprocessor:
                              "cash_roa", "debt_equity_lev", "cash_ratio", "receivable_turnover",
                              "avg_receivables_collection_day", "asset_turnover", "net_profit_margin_on_sales"]
 
-    def __default_logic(self, row):
+    def default_logic(self, row):
         """
         Define the binary target variable for default.
         If def_date is non-empty, it is assumed that the firm defaults at some point in our training data
@@ -46,11 +45,9 @@ class Preprocessor:
             return int(self.days_in_year * self.stmt_delay < days < self.days_in_year * (1 + self.stmt_delay))
         return 0
 
-    def __convert_data_types(self, df):
+    def to_datetime(self, df):
         df["def_date"] = pd.to_datetime(df["def_date"], dayfirst=True)
         df["stmt_date"] = pd.to_datetime(df["stmt_date"])
-
-        df[self.categorical_feat] = df[self.categorical_feat].astype("category")
         return df
 
     def __fill_missing_values(self, df):
@@ -124,9 +121,10 @@ class Preprocessor:
         df_shape = df.shape[0]
         print(f"Initial number of rows: {df_shape}")
 
-        df = self.__convert_data_types(df)
+        df = self.to_datetime(df)
+        df = to_categorical(df)
 
-        df[self.target] = df.apply(self.__default_logic, axis=1)
+        df[self.target] = df.apply(self.default_logic, axis=1)
         # dropping records for which def_date is within 6 months of statement date
         df.drop(df[df[self.target] == -1].index, inplace=True)
         df.reset_index(inplace=True, drop=True)

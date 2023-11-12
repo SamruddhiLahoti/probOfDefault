@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 
-from config import DAYS_IN_YEAR, NORM_STD, NORM_MEAN
+from config import FEATURE_SET, CATEGORICAL_FT, NORM_STD, NORM_MEAN, TARGET
 
 
 def load_dataset(data_path):
@@ -14,40 +14,31 @@ def load_dataset(data_path):
 
 # -------------------------------------- Preprocessor Util Functions --------------------------------------------------#
 
-# FEATURE_SET = ["wc_net", "roa", "debt_st", "working_capital_turnover", "asst_tot", "defensive_interval",
-#                "debt_assets_lev", "current_ratio", "debt_equity_lev", "cash_ratio", "receivable_turnover",
-#                "avg_receivables_collection_day", "asset_turnover", "net_profit_margin_on_sales"]
+def to_categorical(df):
+    df[CATEGORICAL_FT] = df[CATEGORICAL_FT].astype("category")
+    return df
 
 
 def extract_feature_values(df):
     """
     Fills in missing values for a few relevant features based on formulas derived from sanity checks
     """
-    # No formulae: wc_net, debt_st, asst_tot, prof_operations, COGS, cash_and_equiv, AR, eqty_tot, asst_current,
-    #       profit
+    # No formulae: "cf_operations", "asst_tot", "eqty_tot", "cash_and_equiv", "debt_st", "cash_and_equiv",
+    #               "prof_operations", "COGS"
 
-    df = df[["wc_net", "debt_st", "asst_tot", "prof_operations", "COGS", "cash_and_equiv", "AR", "eqty_tot",
-             "asst_current", "profit", "roa", "rev_operating"]]
+    df = to_categorical(df)
 
     # Existing features
-    df["roa"].fillna(df["prof_operations"] / df["asst_tot"] * 100, inplace=True)
     df["rev_operating"].fillna(df["prof_operations"] + df["COGS"], inplace=True)
 
     # New features
-    df["working_capital_turnover"] = df["rev_operating"] / df["wc_net"]
-    df["defensive_interval"] = (df["cash_and_equiv"] + df["AR"]) * DAYS_IN_YEAR / \
-                               (df["COGS"] + df["rev_operating"] - df["prof_operations"])
+    df["cash_roa"] = df["cf_operations"] / df["asst_tot"]
     df["debt_assets_lev"] = (df["asst_tot"] - df["eqty_tot"]) / df["asst_tot"]
-    df["current_ratio"] = df["asst_current"] / df["debt_st"]
-    df["debt_equity_lev"] = (df["asst_tot"] - df["eqty_tot"]) / df["eqty_tot"]
     df["cash_ratio"] = df["cash_and_equiv"] / df["debt_st"]
-    df["receivable_turnover"] = df["rev_operating"] / df["AR"]
-    df["avg_receivables_collection_day"] = DAYS_IN_YEAR / df["receivable_turnover"]
     df["asset_turnover"] = df["rev_operating"] / df["asst_tot"]
-    df["net_profit_margin_on_sales"] = df["profit"] / df["rev_operating"]
-
     df["norm_asst_tot"] = (df["asst_tot"] - NORM_MEAN) / NORM_STD
 
+    df = df[FEATURE_SET + [TARGET]].copy()
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
 
     return df

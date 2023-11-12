@@ -3,7 +3,7 @@ import argparse
 from models import *
 
 from utils import load_dataset, extract_feature_values
-from config import FINAL_MODEL, FEATURE_SET
+from config import FINAL_MODEL, FEATURE_SET, DATA_PATH
 
 
 if __name__ == "__main__":
@@ -31,6 +31,8 @@ if __name__ == "__main__":
     dataset.loc[dataset[FEATURE_SET].isnull().any(axis=1), "predicted_pd"] = np.nan
 
     dataset["predicted_pd"].to_csv(args.output_csv)
+
+    print(dataset[["is_default", "predicted_pd"]])
 
 
 
