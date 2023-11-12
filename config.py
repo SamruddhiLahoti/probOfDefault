@@ -2,7 +2,7 @@ TARGET = "is_default"
 
 DATA_PATH = "/Users/lahosa/Documents/NYU/Fall 2023/ML in Finance/Project/train.csv"
 
-LR_SAVE_PATH = "/Users/lahosa/Documents/NYU/Fall 2023/ML in Finance/Project/ly_model.pkl"
+LR_SAVE_PATH = "/Users/lahosa/Documents/NYU/Fall 2023/ML in Finance/Project/lr_model.pkl"
 NN_SAVE_PATH = "/Users/lahosa/Documents/NYU/Fall 2023/ML in Finance/Project/neural_net"
 XGB_SAVE_PATH = "/Users/lahosa/Documents/NYU/Fall 2023/ML in Finance/Project/xgb_model.json"
 

@@ -29,8 +29,8 @@ class LogisticRegression:
         with open(LR_SAVE_PATH, 'wb') as file:
             pickle.dump(self.model, file)
 
-    def load_trained_model(self):
-        with open(LR_SAVE_PATH, 'rb') as file:
+    def load_trained_model(self, model_path):
+        with open(model_path, 'rb') as file:
             self.model = pickle.load(file)
 
 
@@ -73,8 +73,8 @@ class NeuralNetwork:
     def save_model(self):
         self.model.save(NN_SAVE_PATH)
 
-    def load_trained_model(self):
-        self.model = keras.models.load_model(NN_SAVE_PATH)
+    def load_trained_model(self, model_path):
+        self.model = keras.models.load_model(model_path)
 
 
 class XGBoost:
@@ -100,8 +100,8 @@ class XGBoost:
         #     pickle.dump(self.model, file)
         self.model.save_model(XGB_SAVE_PATH)
 
-    def load_trained_model(self):
+    def load_trained_model(self, model_path):
         # with open(XGB_SAVE_PATH, 'rb') as file:
         #     self.model = pickle.load(file)
-        self.model = xgb.Booster(model_file=XGB_SAVE_PATH)
+        self.model = xgb.Booster(model_file=model_path)
 

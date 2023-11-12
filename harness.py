@@ -11,6 +11,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--input_csv', help='Path to the input file')
     parser.add_argument('--output_csv', help='Path to the output file')
+    parser.add_argument('--model_path', help='Path to the trained model')
 
     args = parser.parse_args()
 
@@ -25,7 +26,7 @@ if __name__ == "__main__":
     elif FINAL_MODEL == "xgb":
         model = XGBoost()
 
-    model.load_trained_model()
+    model.load_trained_model(args.model_path)
 
     dataset["predicted_pd"] = model.predict(dataset[FEATURE_SET])
     dataset.loc[dataset[FEATURE_SET].isnull().any(axis=1), "predicted_pd"] = np.nan
