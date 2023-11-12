@@ -1,4 +1,3 @@
-# import key packages
 import pandas as pd
 import numpy as np
 
@@ -7,7 +6,6 @@ from config import TARGET
 
 class Preprocessor:
     def __init__(self):
-        # self.ateco_sector_map = {}
 
         self.categorical_feat = ["legal_struct", "ateco_sector", "HQ_city"]
 
@@ -19,8 +17,8 @@ class Preprocessor:
         self.features = ["stmt_date", "HQ_city", "legal_struct", "ateco_sector", "def_date", "fs_year",
                          "asst_intang_fixed", "asst_tang_fixed", "asst_fixed_fin", "asst_current", "AR",
                          "cash_and_equiv", "asst_tot", "eqty_tot", "debt_st", "rev_operating", "COGS",
-                         "prof_operations", "goodwill", "exp_financing", "profit", "roa", "roe", "wc_net",
-                         "margin_fin", "cf_operations"]
+                         "prof_operations", "goodwill", "exp_financing", "profit", "roa", "wc_net",
+                         "cf_operations"]  # "margin_fin", "roe"
 
         self.new_features = ["working_capital_turnover", "defensive_interval", "debt_assets_lev", "current_ratio",
                              "cash_roa", "debt_equity_lev", "cash_ratio", "receivable_turnover",
@@ -49,13 +47,6 @@ class Preprocessor:
         return 0
 
     def __convert_data_types(self, df):
-        """
-
-        Args:
-            df:
-        Returns:
-
-        """
         df["def_date"] = pd.to_datetime(df["def_date"], dayfirst=True)
         df["stmt_date"] = pd.to_datetime(df["stmt_date"])
 
@@ -63,43 +54,51 @@ class Preprocessor:
         return df
 
     def __fill_missing_values(self, df):
+        """
+        Fills in missing values for a few relevant features based on formulas derived from sanity checks
+        """
 
         df["roa"].fillna(df["prof_operations"] / df["asst_tot"] * 100, inplace=True)
-        df["margin_fin"].fillna(
-            df["eqty_tot"] - df["asst_intang_fixed"] - df["asst_tang_fixed"] - df["asst_fixed_fin"],
-            inplace=True
-        )
+
+        # FIXME: Not used for any ratio calc or as a feature
+        # df["margin_fin"].fillna(
+        #     df["eqty_tot"] - df["asst_intang_fixed"] - df["asst_tang_fixed"] - df["asst_fixed_fin"],
+        #     inplace=True
+        # )
+
         df["rev_operating"].fillna(df["prof_operations"] + df["COGS"], inplace=True)
-        df["roe"].fillna(df["profit"] / df["eqty_tot"], inplace=True)
+
+        # FIXME: only used in financial leverage calc which isn't used anywhere (financial_leverage p_val: 0.772)
+        # FIXME: univariate analysis also gives a high p_value (0.334). do we need this?
+        # df["roe"].fillna(df["profit"] / df["eqty_tot"], inplace=True)
 
         df.replace([np.inf, -np.inf], np.nan, inplace=True)
 
         return df
 
     def __calc_financial_ratios(self, df):
-        
+        """
+        Calculates liquidity, profitability, leverage and efficiency ratios from relevant features in the dataset
+        """
+
         # liquidity
         df["current_ratio"] = df["asst_current"] / df["debt_st"]
         df["cash_ratio"] = df["cash_and_equiv"] / df["debt_st"]
-        df["defensive_interval"] = (df["cash_and_equiv"] + df["AR"]) * self.days_in_year / (df["COGS"] + df["rev_operating"] - df["prof_operations"])
-        # +wc_net
+        df["defensive_interval"] = (df["cash_and_equiv"] + df["AR"]) * self.days_in_year / \
+                                   (df["COGS"] + df["rev_operating"] - df["prof_operations"])
 
         # profitability
         df["gross_profit_margin_on_sales"] = df["prof_operations"] / df["rev_operating"]
         df["net_profit_margin_on_sales"] = df["profit"] / df["rev_operating"]
         df["cash_roa"] = df["cf_operations"] / df["asst_tot"]
-        # FIXME: assumption
-        # df = df[df["cash_roa"] <= 50]
-        # +roe
-        # +roa
 
         # leverage
         df["debt_assets_lev"] = (df["asst_tot"] - df["eqty_tot"]) / df["asst_tot"]
         df["debt_equity_lev"] = (df["asst_tot"] - df["eqty_tot"]) / df["eqty_tot"]
-        df["financial_leverage"] = df["roe"] - df["roa"]
+        df["leverage_st"] = df["debt_st"] / df["asst_tot"]
+        # df["financial_leverage"] = df["roe"] - df["roa"]  # Not used  (financial_leverage p_val: 0.772)
 
         # efficiency
-        # df.drop(df[(df["rev_operating"] == 0.0) & (df["AR"] == 0.0)].index, inplace=True)
         df["receivable_turnover"] = df["rev_operating"] / df["AR"]
         df["avg_receivables_collection_day"] = self.days_in_year / df["receivable_turnover"]
         df["asset_turnover"] = df["rev_operating"] / df["asst_tot"]
@@ -111,12 +110,13 @@ class Preprocessor:
 
     def preprocess(self, df):
         """
+        Preprocesses the raw data to get it into a consistent and clean format
+        to get it ready for walk-forward analysis
 
         Args:
-            df:
-
+            df: the raw dataset
         Returns:
-
+            The cleaned df
         """
 
         df = df[self.features].copy().reset_index(drop=True)
@@ -138,23 +138,20 @@ class Preprocessor:
         df = self.__calc_financial_ratios(df)
 
         # no longer needed for analysis
-        df.drop("def_date", axis=1, inplace=True)
+        df.drop(["def_date", "stmt_date"], axis=1, inplace=True)
 
         # dropping na rows
         df.dropna(
-            subset=["HQ_city", "wc_net", "roa", "debt_st", "working_capital_turnover", "asst_tot", "defensive_interval",
-                    "debt_assets_lev", "current_ratio", "cash_roa", "AR", "rev_operating", "prof_operations",
-                    "debt_equity_lev", "cash_ratio", "receivable_turnover", "avg_receivables_collection_day", "goodwill",
-                    "asset_turnover", "net_profit_margin_on_sales", "cf_operations", "cash_and_equiv", "margin_fin"],
+            subset=["HQ_city", "legal_struct", "ateco_sector", "wc_net", "roa", "debt_st", "working_capital_turnover",
+                    "asst_tot", "defensive_interval", "debt_assets_lev", "current_ratio", "cash_roa", "AR",
+                    "rev_operating", "prof_operations", "debt_equity_lev", "cash_ratio", "receivable_turnover",
+                    "avg_receivables_collection_day", "goodwill", "asset_turnover", "net_profit_margin_on_sales",
+                    "cf_operations", "cash_and_equiv"],  # "margin_fin"
             how="any",
             inplace=True
         )
 
         rec_dropped = (1 - df.shape[0] / df_shape) * 100
         print(f"After dropping NaNs: {df.shape[0]} => {rec_dropped:.3f}% dropped (of original)")
-
-        df["norm_asst_tot"] = (df["asst_tot"] - df["asst_tot"].mean()) / df["asst_tot"].std()
-
-        # print(f"After dropping na, num NaNs in df:\n{df.isna().sum()}")
 
         return df

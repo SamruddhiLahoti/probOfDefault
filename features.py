@@ -20,13 +20,22 @@ class FeatureSelection:
         self.feature_sets = {
             "liquidity": ["current_ratio", "cash_ratio", "defensive_interval", "wc_net"],
             "profitability": ["roe", "roa", "gross_profit_margin_on_sales", "net_profit_margin_on_sales", "cash_roa"],
-            "leverage": ["debt_assets_lev", "debt_equity_lev", "financial_leverage"],
+            "leverage": ["debt_assets_lev", "debt_equity_lev", "financial_leverage", "leverage_st"],
             "efficiency": ["receivable_turnover", "avg_receivables_collection_day", "asset_turnover",
                            "working_capital_turnover"]
         }
         self.target = TARGET
 
     def univariate_analysis(self, df, plot=False):
+        """
+
+        Args:
+            df:
+            plot:
+
+        Returns:
+
+        """
 
         features_identified = {}
         for feat_set in self.feature_sets:
@@ -66,6 +75,14 @@ class FeatureSelection:
         return list(features_identified.values())
 
     def rfe_analysis(self, df):
+        """
+
+        Args:
+            df:
+
+        Returns:
+
+        """
         print()
         features_identified = {}
         for feat_set in self.feature_sets:

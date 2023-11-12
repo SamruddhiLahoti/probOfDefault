@@ -1,3 +1,4 @@
+import pickle
 import numpy as np
 
 import statsmodels.formula.api as smf
@@ -5,26 +6,41 @@ from tensorflow import keras
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils.class_weight import compute_class_weight
+from xgboost import XGBClassifier, Booster
+
+from config import XGB_SAVE_PATH, NN_SAVE_PATH, LR_SAVE_PATH
 
 
 class LogisticRegression:
-    def __init__(self, features, target, data):
-        self.formula = target + " ~ " + " + ".join(features)
-        self.data = data
+    def __init__(self):
+        self.model = None
 
-    def fit_model(self):
-        logit_model = smf.logit(self.formula, data=self.data)
-        return logit_model.fit(disp=False)
+    def fit_model(self, data, target, features):
+        formula = target + " ~ " + " + ".join(features)
+        data = data
+        self.model = smf.logit(formula, data=data).fit(disp=False)
+
+    def predict(self, test_data):
+        return self.model.predict(test_data)
+
+    def save_model(self):
+        with open(LR_SAVE_PATH, 'wb') as file:
+            pickle.dump(self.model, file)
+
+    def load_trained_model(self):
+        with open(LR_SAVE_PATH, 'rb') as file:
+            self.model = pickle.load(file)
 
 
 class NeuralNetwork:
 
-    def __init__(self, target, data):
-
-        self.data = data
+    def __init__(self):
+        # self.data = data
         self.loss_func = "binary_crossentropy"
-        self.target = target
-        pass
+        # self.target = target
+
+        self.scaler = StandardScaler()
+        self.model = None
 
     def __network(self, input_dim):
         model = keras.Sequential([
@@ -38,14 +54,42 @@ class NeuralNetwork:
 
         return model
 
-    def fit_model(self, epochs=5):
+    def fit_model(self, data, target, features, epochs=5):
+        x = self.scaler.fit_transform(data[features])
+        y = data[target]
 
-        scaler = StandardScaler()
-        x = scaler.fit_transform(self.data.drop(self.target))
-        y = self.data[self.target]
         weights = compute_class_weight(class_weight="balanced", classes=np.unique(y), y=y)
         weights = dict(zip(np.unique(y), weights))
 
-        net = self.__network(x.shape[0])
-        net.fit(x, y, epochs=epochs, batch_size=32, class_weight=weights)
-        return net
+        self.model = self.__network(x.shape[1])
+        self.model.fit(x, y, epochs=epochs, batch_size=32, class_weight=weights)
+
+    def predict(self, test_data):
+        x = self.scaler.fit_transform(test_data)
+        return self.model.predict(x)
+
+    def save_model(self):
+        self.model.save(NN_SAVE_PATH)
+
+    def load_trained_model(self):
+        self.model = keras.models.load_model(NN_SAVE_PATH)
+
+
+class XGBoost:
+
+    def __init__(self):
+        # self.data = data
+        # self.target = target
+        self.model = XGBClassifier()
+
+    def fit_model(self, data, target, features):
+        self.model.fit(data[features], data[target])
+
+    def predict(self, test_data):
+        return self.model.predict_proba(test_data)[:, 1]
+
+    def save_model(self):
+        self.model.save_model(XGB_SAVE_PATH)
+
+    def load_trained_model(self):
+        self.model = Booster(model_file=XGB_SAVE_PATH)

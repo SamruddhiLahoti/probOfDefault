@@ -1,24 +1,11 @@
+import matplotlib.pyplot as plt
 import pandas as pd
-from statsmodels.stats.outliers_influence import variance_inflation_factor
 import sklearn.metrics as metrics
 
-from sklearn.preprocessing import StandardScaler
-import matplotlib.pyplot as plt
-
-from preprocess import Preprocessor
-from features import FeatureSelection
-from models import LogisticRegression, NeuralNetwork
-
 from config import *
-
-
-def assert_low_VIF(data):
-    vif_data = pd.DataFrame()
-    vif_data["Variable"] = data.columns
-    vif_data["VIF"] = [variance_inflation_factor(data.values, i) for i in range(data.shape[1])]
-
-    assert sum(vif_data["VIF"] > 2) == 0
-    # return vif_data
+from features import FeatureSelection
+from models import *
+from preprocess import Preprocessor
 
 
 def plot(pred_list, est_name):
@@ -47,7 +34,7 @@ def plot(pred_list, est_name):
     plt.show()
 
     # Display the AUC value
-    print(f'AUC: {roc_auc:.6f}')
+    print(f'\nAUC: {roc_auc:.6f}')
 
 
 class WalkForward:
@@ -61,9 +48,19 @@ class WalkForward:
         self.train_mean, self.train_std = None, None
 
     def __save_params(self):
+        # FIXME
         pass
 
     def __normalize_assets(self, train_df, test_df):
+        """
+        The total asset values in both train and test datasets are normalized
+        using mean and std from ONLY the train dataset
+        Args:
+            train_df: the train slice
+            test_df: the test slice
+        Returns:
+            train and test slices with asst_tot normalized
+        """
         self.train_mean = train_df["asst_tot"].mean()
         self.train_std = train_df["asst_tot"].std()
 
@@ -71,29 +68,29 @@ class WalkForward:
         test_df["norm_asst_tot"] = (test_df["asst_tot"] - self.train_mean) / self.train_std
         return train_df, test_df
 
-    def __predictor(self, est_name, test_df, features):
+    def __predictor(self, test_df, features):
         pred_df = pd.DataFrame()
 
         if not test_df.empty:
             pred_df['y_true'] = test_df[self.target].copy()
-
-            if est_name == "logistic":
-                pred_df['y_pred_prob'] = self.model.predict(test_df[features])
-
-            elif est_name == "NN":
-                scaler = StandardScaler()
-                x = scaler.fit_transform(test_df)
-                pred_df['y_pred_prob'] = self.model.predict(x)
+            pred_df['y_pred_prob'] = self.model.predict(test_df[features])
 
         return pred_df
 
     def __estimator(self, est_name, features, data, epochs):
         if est_name == "logistic":
-            self.model = LogisticRegression(features, self.target, data).fit_model()
+            self.model = LogisticRegression()
+            self.model.fit_model(data, self.target, features)
             return self.model
 
         elif est_name == "NN":
-            self.model = NeuralNetwork(self.target, data).fit_model(epochs)
+            self.model = NeuralNetwork()
+            self.model.fit_model(data, self.target, features, epochs)
+            return self.model
+
+        elif est_name == "xgb":
+            self.model = XGBoost()
+            self.model.fit_model(data, self.target, features)
             return self.model
 
     def __walk_forward(self, est_name, features, epochs, start_year):
@@ -113,7 +110,7 @@ class WalkForward:
             print(f"\nYear: {year} | Sample default rate: {default_rate * 100:.3f}%")
 
             model = self.__estimator(est_name, features, train_df, epochs)
-            pred = self.__predictor(est_name, test_df, features)
+            pred = self.__predictor(test_df, features)
 
             model_list.append(model)
             pred_list.append(pred)
@@ -138,13 +135,15 @@ if __name__ == "__main__":
 
     dataset = preprocessor.preprocess(dataset)
 
-    univariate_features = fs.univariate_analysis(dataset)
-    assert_low_VIF(dataset[univariate_features])
-
-    rfe_features = fs.rfe_analysis(dataset)
-    assert_low_VIF(dataset[rfe_features])
+    # univariate_features = fs.univariate_analysis(dataset)
+    # assert_low_VIF(dataset[univariate_features])
+    #
+    # rfe_features = fs.rfe_analysis(dataset)
+    # assert_low_VIF(dataset[rfe_features])
 
     wf = WalkForward(dataset)
-    wf.run("logistic", rfe_features+["norm_asst_tot"])
+    wf.run("xgb", FEATURE_SET)
+
+    # print(f"Final mean: {wf.train_mean} and std: {wf.train_std}")
 
 

@@ -1,46 +1,41 @@
-import pandas as pd
-from statsmodels.stats.outliers_influence import variance_inflation_factor
+import argparse
 
-from sklearn.preprocessing import StandardScaler
+from models import *
 
-from preprocess import Preprocessor
-from features import FeatureSelection
-
-
-def assert_low_VIF(data):
-    vif_data = pd.DataFrame()
-    vif_data["Variable"] = data.columns
-    vif_data["VIF"] = [variance_inflation_factor(data.values, i) for i in range(data.shape[1])]
-
-    assert sum(vif_data["VIF"] > 2) == 0
-    # return vif_data
-
-
-def predictor(model, test_df, features, target='default'):
-    new_df = pd.DataFrame()
-
-    if not test_df.empty:
-        scaler = StandardScaler()
-        x = scaler.fit_transform(test_df[features])
-
-        new_df['y_true'] = test_df[target].copy()
-        new_df['y_pred_prob'] = model.predict(x)
-
-    return new_df
+from utils import load_dataset, extract_feature_values
+from config import FINAL_MODEL, FEATURE_SET
 
 
 if __name__ == "__main__":
-    file_path = "/Users/lahosa/Documents/NYU/Fall 2023/ML in Finance/Project/train.csv"
+    parser = argparse.ArgumentParser()
 
-    df = pd.read_csv(file_path).drop("Unnamed: 0", axis=1).reset_index(drop=True)
+    parser.add_argument('input_file', help='Path to the input file')
+    parser.add_argument('--output', '-o', help='Path to the output file')
 
-    preprocessor = Preprocessor()
-    fs = FeatureSelection()
+    args = parser.parse_args()
 
-    df = preprocessor.preprocess(df)
+    input_file = args.input_file
+    output_file = args.output
 
-    univariate_features = fs.univariate_analysis(df)
-    assert_low_VIF(df[univariate_features])
+    dataset = load_dataset(input_file)
 
-    rfe_features = fs.rfe_analysis(df)
-    assert_low_VIF(df[rfe_features])
+    dataset = extract_feature_values(dataset)
+
+    model = None
+    if FINAL_MODEL == "logistic":
+        model = LogisticRegression()
+    elif FINAL_MODEL == "NN":
+        model = NeuralNetwork()
+    elif FINAL_MODEL == "xgb":
+        model = XGBoost()
+
+    model.load_trained_model()
+
+    dataset["predicted_pd"] = model.predict(dataset[FEATURE_SET])
+
+    dataset.loc[dataset[FEATURE_SET].isnull().any(axis=1), "predicted_pd"] = np.nan
+
+    dataset["predicted_pd"].to_csv(output_file)
+
+
+
