@@ -17,7 +17,7 @@ class Preprocessor:
                          "asst_intang_fixed", "asst_tang_fixed", "asst_fixed_fin", "asst_current", "AR",
                          "cash_and_equiv", "asst_tot", "eqty_tot", "debt_st", "rev_operating", "COGS",
                          "prof_operations", "goodwill", "exp_financing", "profit", "roa", "wc_net",
-                         "cf_operations"]  # "margin_fin", "roe"
+                         "cf_operations"]
 
         self.new_features = ["working_capital_turnover", "defensive_interval", "debt_assets_lev", "current_ratio",
                              "cash_roa", "debt_equity_lev", "cash_ratio", "receivable_turnover",
@@ -56,18 +56,7 @@ class Preprocessor:
         """
 
         df["roa"].fillna(df["prof_operations"] / df["asst_tot"] * 100, inplace=True)
-
-        # FIXME: Not used for any ratio calc or as a feature
-        # df["margin_fin"].fillna(
-        #     df["eqty_tot"] - df["asst_intang_fixed"] - df["asst_tang_fixed"] - df["asst_fixed_fin"],
-        #     inplace=True
-        # )
-
         df["rev_operating"].fillna(df["prof_operations"] + df["COGS"], inplace=True)
-
-        # FIXME: only used in financial leverage calc which isn't used anywhere (financial_leverage p_val: 0.772)
-        # FIXME: univariate analysis also gives a high p_value (0.334). do we need this?
-        # df["roe"].fillna(df["profit"] / df["eqty_tot"], inplace=True)
 
         df.replace([np.inf, -np.inf], np.nan, inplace=True)
 
@@ -93,7 +82,6 @@ class Preprocessor:
         df["debt_assets_lev"] = (df["asst_tot"] - df["eqty_tot"]) / df["asst_tot"]
         df["debt_equity_lev"] = (df["asst_tot"] - df["eqty_tot"]) / df["eqty_tot"]
         df["leverage_st"] = df["debt_st"] / df["asst_tot"]
-        # df["financial_leverage"] = df["roe"] - df["roa"]  # Not used  (financial_leverage p_val: 0.772)
 
         # efficiency
         df["receivable_turnover"] = df["rev_operating"] / df["AR"]
@@ -117,7 +105,7 @@ class Preprocessor:
         """
 
         df = df[self.features].copy().reset_index(drop=True)
-
+        
         df_shape = df.shape[0]
         print(f"Initial number of rows: {df_shape}")
 

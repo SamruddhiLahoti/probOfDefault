@@ -1,24 +1,21 @@
 import pickle
-import numpy as np
-
-import statsmodels.formula.api as smf
-# from tensorflow import keras
-
-from sklearn.preprocessing import StandardScaler
-from sklearn.utils.class_weight import compute_class_weight
-
 import xgboost as xgb
+import statsmodels.formula.api as smf
 
-from config import XGB_SAVE_PATH, NN_SAVE_PATH, LR_SAVE_PATH
+from config import XGB_SAVE_PATH, LR_SAVE_PATH
+import warnings
 
-
+warnings.filterwarnings('ignore')
+import pickle
 class LogisticRegression:
     def __init__(self):
         self.model = None
 
     def fit_model(self, data, target, features):
-        formula = target + " ~ " + " + ".join(features)
-        data = data
+        print('inside_fit_model')
+        independent_vars_str = " + ".join(features[:-1])
+        formula = f'{features[-1]} ~ {independent_vars_str}'
+        print(formula)
         self.model = smf.logit(formula, data=data).fit(disp=False)
 
     def predict(self, test_data):
@@ -33,57 +30,15 @@ class LogisticRegression:
             self.model = pickle.load(file)
 
 
-class NeuralNetwork:
-
-    def __init__(self):
-        # self.data = data
-        self.loss_func = "binary_crossentropy"
-        # self.target = target
-
-        self.scaler = StandardScaler()
-        self.model = None
-
-    # def __network(self, input_dim):
-    #     model = keras.Sequential([
-    #         keras.layers.Input(shape=(input_dim,)),  # Input layer
-    #         keras.layers.Dense(128, activation='relu'),  # Hidden layer with ReLU activation
-    #         keras.layers.Dense(64, activation='relu'),  # Another hidden layer
-    #         keras.layers.Dense(1, activation='sigmoid')  # Output layer with sigmoid activation for probability
-    #     ])
-    #
-    #     model.compile(optimizer='adam', loss=self.loss_func, metrics=['accuracy'])
-    #
-    #     return model
-
-    def fit_model(self, data, target, features, epochs=5):
-        x = self.scaler.fit_transform(data[features])
-        y = data[target]
-
-        weights = compute_class_weight(class_weight="balanced", classes=np.unique(y), y=y)
-        weights = dict(zip(np.unique(y), weights))
-
-        # self.model = self.__network(x.shape[1])
-        self.model.fit(x, y, epochs=epochs, batch_size=32, class_weight=weights)
-
-    def predict(self, test_data):
-        x = self.scaler.fit_transform(test_data)
-        return self.model.predict(x)
-
-    def save_model(self):
-        self.model.save(NN_SAVE_PATH)
-
-    def load_trained_model(self, model_path):
-        self.model = keras.models.load_model(model_path)
-
-
 class XGBoost:
 
-    def __init__(self):
+    def __init__(self,model_name):
         self.params = {
             'objective': 'binary:logistic',
             'eval_metric': 'logloss',
             'scale_pos_weight': 0.013
         }
+        self.model_name = model_name
         self.model = None
 
     def fit_model(self, data, target, features):
@@ -95,12 +50,11 @@ class XGBoost:
         return self.model.predict(dtest)
 
     def save_model(self):
-        # with open(XGB_SAVE_PATH, 'wb') as file:
-        #     pickle.dump(self.model, file)
-        self.model.save_model(XGB_SAVE_PATH)
+        model_path = f"{self.model_name}_model.json"
+        self.model.save_model(model_path)
 
     def load_trained_model(self, model_path):
-        # with open(XGB_SAVE_PATH, 'rb') as file:
-        #     self.model = pickle.load(file)
         self.model = xgb.Booster(model_file=model_path)
+        
+
 
